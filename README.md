@@ -197,6 +197,9 @@
             document.getElementById('avail-count').innerText = availableCount;
             document.getElementById('occ-count').innerText = occupiedCount;
         }
+        const firebaseConfig = { 
+        databaseURL: "https://smart-e9b33-default-rtdb.firebaseio.com/" 
+        };
     </script>
 </body>
 </html>
