@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -15,7 +16,6 @@
             min-height: 100vh;
         }
 
-        /* Container styles */
         .container {
             background-color: #ffffff;
             padding: 30px;
@@ -30,7 +30,6 @@
             margin-bottom: 20px;
         }
 
-        /* Login Screen */
         #login-screen input {
             width: 90%;
             padding: 10px;
@@ -39,7 +38,6 @@
             border-radius: 6px;
         }
 
-        /* Dashboard Counters */
         .counters {
             display: flex;
             justify-content: space-around;
@@ -52,10 +50,10 @@
             border-radius: 6px;
             color: white;
         }
+        /* Green for available, Red for occupied */
         #available-counter { background-color: #28a745; }
         #occupied-counter { background-color: #dc3545; }
 
-        /* Grid Layout (2 per row) */
         .parking-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -63,7 +61,6 @@
             margin-bottom: 20px;
         }
 
-        /* Slot Styling */
         .slot {
             padding: 20px;
             border-radius: 8px;
@@ -74,7 +71,6 @@
         .available { background-color: #28a745; }
         .occupied { background-color: #dc3545; }
 
-        /* General Button Styling */
         button {
             padding: 10px 20px;
             border: none;
@@ -84,13 +80,16 @@
             margin-top: 10px;
             width: 100%;
         }
-        .btn-login { background-color: #007bff; color:white; }
+        .btn-login { background-color: #007bff; color: white; }
         .btn-book { background-color: white; color: #28a745; }
         .btn-leave { background-color: white; color: #dc3545; }
         button:hover { opacity: 0.9; }
 
         .hidden { display: none; }
     </style>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
 
@@ -106,20 +105,20 @@
         <h1>Smart Parking System</h1>
         
         <div class="counters">
-            <div class="counter-box" id="available-counter">Available Slots: <span id="avail-count">4</span></div>
-            <div class="counter-box" id="occupied-counter">Occupied Slots: <span id="occ-count">0</span></div>
+            <div class="counter-box" id="available-counter">Available Slots: <span id="avail-count">2</span></div>
+            <div class="counter-box" id="occupied-counter">Occupied Slots: <span id="occ-count">2</span></div>
         </div>
 
         <div class="parking-grid">
-            <div id="slot-1" class="slot available">
+            <div id="slot-1" class="slot occupied">
                 <div>Slot 1</div>
-                <div class="status-text">Available</div>
-                <button class="btn-book" onclick="bookSlot(1)">Book Now</button>
+                <div class="status-text">Slot Occupied</div>
+                <button class="btn-leave" onclick="leaveSlot(1)">Leave</button>
             </div>
-            <div id="slot-2" class="slot available">
+            <div id="slot-2" class="slot occupied">
                 <div>Slot 2</div>
-                <div class="status-text">Available</div>
-                <button class="btn-book" onclick="bookSlot(2)">Book Now</button>
+                <div class="status-text">Slot Occupied</div>
+                <button class="btn-leave" onclick="leaveSlot(2)">Leave</button>
             </div>
             <div id="slot-3" class="slot available">
                 <div>Slot 3</div>
@@ -135,11 +134,17 @@
     </div>
 
     <script>
-        // System variables
-        let availableCount = 4;
-        let occupiedCount = 0;
+        // Firebase Database Link
+        const firebaseConfig = { 
+            databaseURL: "https://smart-e9b33-default-rtdb.firebaseio.com/" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // Login transition logic
+        // Variables start at 2
+        let availableCount = 2;
+        let occupiedCount = 2;
+
         function handleLogin() {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -147,59 +152,59 @@
             if(user.trim() !== "" && pass.trim() !== "") {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('dashboard-screen').classList.remove('hidden');
+                
+                // Set default Firebase database state when logged in
+                db.ref('Parking/Slot1').set('Occupied');
+                db.ref('Parking/Slot2').set('Occupied');
+                db.ref('Parking/Slot3').set('Available');
+                db.ref('Parking/Slot4').set('Available');
             } else {
                 alert("Please enter a username and password.");
             }
         }
 
-        // Booking action logic
         function bookSlot(slotId) {
             const confirmBooking = confirm("Are you sure you want to book Slot " + slotId + "?");
             
             if (confirmBooking) {
                 const slotDiv = document.getElementById(`slot-${slotId}`);
                 
-                // Change UI to Occupied State
                 slotDiv.className = "slot occupied";
                 slotDiv.querySelector('.status-text').innerText = "Slot Occupied";
                 slotDiv.querySelector('button').className = "btn-leave";
                 slotDiv.querySelector('button').innerText = "Leave";
                 slotDiv.querySelector('button').setAttribute("onclick", `leaveSlot(${slotId})`);
                 
-                // Track dynamic counter changes
                 availableCount--;
                 occupiedCount++;
                 updateCounters();
+
+                db.ref('Parking/Slot' + slotId).set('Occupied');
             }
         }
 
-        // Leaving action logic
         function leaveSlot(slotId) {
             alert("Please pay ₹100 at the counter.\nThanks for visiting!!");
             
             const slotDiv = document.getElementById(`slot-${slotId}`);
             
-            // Revert back to Available State
             slotDiv.className = "slot available";
             slotDiv.querySelector('.status-text').innerText = "Available";
             slotDiv.querySelector('button').className = "btn-book";
             slotDiv.querySelector('button').innerText = "Book Now";
             slotDiv.querySelector('button').setAttribute("onclick", `bookSlot(${slotId})`);
             
-            // Track dynamic counter changes
             availableCount++;
             occupiedCount--;
             updateCounters();
+
+            db.ref('Parking/Slot' + slotId).set('Available');
         }
 
-        // Live calculation updates
         function updateCounters() {
             document.getElementById('avail-count').innerText = availableCount;
             document.getElementById('occ-count').innerText = occupiedCount;
         }
-        const firebaseConfig = { 
-        databaseURL: "https://smart-e9b33-default-rtdb.firebaseio.com/" 
-        };
     </script>
 </body>
 </html>
